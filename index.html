@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Millennium Marine Services - Logística v2.0</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --sidebar: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background-color: var(--sidebar);
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        .sidebar h2 { font-size: 1.1rem; border-bottom: 1px solid #334155; padding-bottom: 10px; color: var(--success); }
+        #lista-visitados { list-style: none; padding: 0; overflow-y: auto; }
+        .visitado-item {
+            background: #334155;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            border-left: 4px solid var(--success);
+        }
+
+        /* Principal */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-area h1 { margin: 0; font-size: 1.4rem; letter-spacing: 1px; }
+
+        .container { padding: 20px; overflow-y: auto; flex: 1; }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            cursor: pointer;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-send { background: #25d366; color: white; }
+        .btn-gps { background: var(--danger); color: white; }
+        .btn-report { background: #64748b; color: white; }
+
+        .rota-item {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Modal Relatório */
+        #modal-relatorio {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+
+        .report-content {
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            padding: 30px;
+            border-radius: 15px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+
+        #gps-display {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <h2>✅ Coletas Realizadas</h2>
+        <div id="lista-visitados"></div>
+    </aside>
+
+    <div class="main-content">
+        <header>
+            <div class="logo-area">
+                <h1>Millennium Marine Services</h1>
+            </div>
+            <div id="relogio" style="font-weight: bold;"></div>
+        </header>
+
+        <div class="container">
+            <div class="card">
+                <h3>👥 Equipe e Operação</h3>
+                <div class="grid-inputs">
+                    <div>
+                        <input type="text" id="mot-nome" placeholder="Motorista">
+                        <input type="tel" id="mot-tel" placeholder="WhatsApp Motorista (ex: 41999999999)" style="margin-top:5px">
+                    </div>
+                    <div>
+                        <input type="text" id="aju-nome" placeholder="Ajudante">
+                        <input type="tel" id="aju-tel" placeholder="Telefone Ajudante" style="margin-top:5px">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-gps" onclick="localizarMotorista()">🛰️ Localizar Motorista</button>
+                    <button class="btn btn-report" onclick="abrirRelatorio()">📊 Ver Relatório</button>
+                </div>
+                <div id="gps-display"></div>
+            </div>
+
+            <div class="card">
+                <h3>📦 Gestão de Endereços</h3>
+                <textarea id="texto-rotas" placeholder="Cole os endereços (um por linha)..."></textarea>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-primary" style="flex: 1;" onclick="renderizarNaTela()">🔨 Visualizar Local</button>
+                    <button class="btn btn-send" style="flex: 1;" onclick="enviarParaWhatsApp()">📲 Enviar Rota (Página Web)</button>
+                </div>
+            </div>
+
+            <div id="itinerario-ativo"></div>
+        </div>
+    </div>
+
+    <div id="modal-relatorio">
+        <div class="report-content">
+            <h2 style="margin-top:0;">📋 Relatório Millennium Marine</h2>
+            <div id="report-header-info"></div>
+            <table>
+                <thead>
+                    <tr><th>Localização</th><th>Horário</th></tr>
+                </thead>
+                <tbody id="report-body"></tbody>
+            </table>
+            <div style="margin-top: 25px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="document.getElementById('modal-relatorio').style.display='none'">Fechar</button>
+                <button class="btn btn-report" onclick="window.print()">🖨️ Imprimir</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dadosRelatorio = [];
+        let watchID = null;
+
+        function atualizarRelogio() {
+            document.getElementById('relogio').innerText = new Date().toLocaleString('pt-BR');
+        }
+        setInterval(atualizarRelogio, 1000);
+
+        // FUNÇÃO LOCALIZAR MOTORISTA (GPS REAL TIME)
+        function localizarMotorista() {
+            const display = document.getElementById('gps-display');
+            if (!navigator.geolocation) {
+                alert("GPS não suportado neste navegador.");
+                return;
+            }
+
+            if (watchID) {
+                navigator.geolocation.clearWatch(watchID);
+                watchID = null;
+                display.style.display = "none";
+                alert("Rastreamento interrompido.");
+                return;
+            }
+
+            display.style.display = "block";
+            display.innerText = "Buscando sinal satélite...";
+
+            watchID = navigator.geolocation.watchPosition((pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const speed = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(0) : 0;
+                display.innerHTML = `🛰️ RASTREAMENTO ATIVO<br>Lat: ${lat.toFixed(5)} | Lon: ${lon.toFixed(5)}<br>Velocidade: ${speed} km/h<br><a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" style="color:white">[Ver no Mapa]</a>`;
+            }, (err) => {
+                alert("Erro ao localizar. Verifique se o GPS está ativo.");
+            }, { enableHighAccuracy: true });
+        }
+
+        function renderizarNaTela() {
+            const texto = document.getElementById('texto-rotas').value;
+            const linhas = texto.split('\n').filter(l => l.trim() !== "");
+            const container = document.getElementById('itinerario-ativo');
+            container.innerHTML = "<h3>📍 Rota Atual</h3>";
+
+            linhas.forEach((linha, index) => {
+                const item = document.createElement('div');
+                item.className = 'rota-item';
+                item.id = `item-${index}`;
+                item.innerHTML = `
+                    <input type="checkbox" style="width:25px; height:25px;" onclick="concluirColeta(${index}, '${linha}')">
+                    <div style="flex:1">
+                        <a href="https://www.google.com/maps/search/${encodeURIComponent(linha)}" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">📍 Abrir GPS</a>
+                        <div style="font-size:0.95rem;">${linha}</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // FUNÇÃO ENVIAR PÁGINA WEB PARA WHATSAPP
+        function enviarParaWhatsApp() {
+            const motTel = document.getElementById('mot-tel').value;
+            if (!motTel) { alert("Informe o WhatsApp do motorista."); return; }
+
+            const motNome = document.getElementById('mot-nome').value;
+            const ajuNome = document.getElementById('aju-nome').value;
+            const rotas = document.getElementById('texto-rotas').value;
+
+            // Criamos uma "página compactada" para enviar via link
+            let mensagem = `*MILLENNIUM MARINE SERVICES*\n`;
+            mensagem += `📦 *ROTA DO DIA:* ${new Date().toLocaleDateString()}\n`;
+            mensagem += `👤 *Equipe:* ${motNome} / ${ajuNome}\n\n`;
+            mensagem += `*Para abrir o programa de coletas no seu celular, clique no link abaixo:*\n\n`;
+            
+            // Aqui simulamos o link do programa (se você hospedar no GitHub Pages, use o seu link aqui)
+            // Por enquanto, enviamos a lista formatada com links individuais
+            const linhas = rotas.split('\n').filter(l => l.trim() !== "");
+            linhas.forEach((l, i) => {
+                mensagem += `${i+1}️⃣ ${l}\n📍 GPS: https://www.google.com/maps/search/${encodeURIComponent(l)}\n\n`;
+            });
+
+            const url = `https://wa.me/${motTel.replace(/\D/g,'')}?text=${encodeURIComponent(mensagem)}`;
+            window.open(url, '_blank');
+        }
+
+        function concluirColeta(index, endereco) {
+            const time = new Date().toLocaleTimeString();
+            dadosRelatorio.push({ endereco, hora: time });
+            const div = document.createElement('div');
+            div.className = 'visitado-item';
+            div.innerHTML = `<strong>${endereco}</strong><br><small>Coletado às ${time}</small>`;
+            document.getElementById('lista-visitados').prepend(div);
+            document.getElementById(`item-${index}`).style.display = 'none';
+        }
+
+        function abrirRelatorio() {
+            document.getElementById('report-header-info').innerHTML = `
+                <p><strong>Equipe:</strong> ${document.getElementById('mot-nome').value} / ${document.getElementById('aju-nome').value}</p>
+                <p><strong>Data:</strong> ${new Date().toLocaleDateString()}</p>
+            `;
+            document.getElementById('report-body').innerHTML = dadosRelatorio.map(d => `
+                <tr><td>${d.endereco}</td><td>${d.hora}</td></tr>
+            `).join('');
+            document.getElementById('modal-relatorio').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
